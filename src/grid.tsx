@@ -94,7 +94,10 @@ class DataView {
   };
 
   getColumnState = (col: number) => {
-    return this.columnViewInfo.get(this.colViewIndexToDataIndex[col]);
+    if (col === 0) {
+      return { width: 50 };
+    }
+    return this.columnViewInfo.get(this.colViewIndexToDataIndex[col - 1]);
   };
 }
 
@@ -114,11 +117,6 @@ export class MyGridInner extends React.Component<{
 
   render() {
     const view = this.props.view;
-    const versionMark = {
-      view: this.props.view.version,
-      store: this.props.view.store.dataVersion,
-    };
-    console.log(versionMark);
     return (
       <div style={{ display: "flex", height: "100%", flexDirection: "column" }}>
         <h1>Hello</h1>
@@ -133,13 +131,12 @@ export class MyGridInner extends React.Component<{
                   this.grid = r;
                 }}
                 cellRenderer={this.cellRender}
-                columnCount={view.numColumns}
+                columnCount={view.numColumns + 1}
                 columnWidth={({ index }) => {
-                  console.log("cw", index, view.getColumnState(index));
                   return view.getColumnState(index).width;
                 }}
                 height={height - 20}
-                rowCount={view.numRows}
+                rowCount={view.numRows + 1}
                 rowHeight={20}
                 width={width}
                 fixedColumnCount={2}
@@ -155,14 +152,25 @@ export class MyGridInner extends React.Component<{
   }
 
   cellRender = (p: GridCellProps) => {
-    const { rowIndex } = p;
+    const { rowIndex, columnIndex } = p;
     if (rowIndex === 0) {
       return this.columnHeaderRender(p);
     }
+    if (columnIndex === 0) {
+      return this.rowHeaderRender(p);
+    }
+    const { key, style } = p;
+    if (false && p.isScrolling) {
+      return (
+        <div key={key} style={style} className={styles.dataCell.cell}>
+          ...
+        </div>
+      );
+    }
     const dataRow = rowIndex - 1;
-    const { columnIndex, key, style } = p;
+    const dataCol = columnIndex - 1;
     const view = this.props.view;
-    const value = view.getCell(dataRow, columnIndex);
+    const value = view.getCell(dataRow, dataCol);
     return (
       <div
         key={key}
@@ -170,7 +178,7 @@ export class MyGridInner extends React.Component<{
         className={styles.dataCell.cell}
         onClick={() => {
           const newV = prompt("value?", value);
-          view.setCell(dataRow, columnIndex, newV == null ? value : newV);
+          view.setCell(dataRow, dataCol, newV == null ? value : newV);
         }}
       >
         {value}
@@ -178,9 +186,23 @@ export class MyGridInner extends React.Component<{
     );
   };
 
+  rowHeaderRender = (p: GridCellProps) => {
+    const { rowIndex, key, style } = p;
+    return (
+      <div key={key} style={style} className={styles.rowHeader.cell}>
+        {rowIndex}
+      </div>
+    );
+  };
+
   columnHeaderRender = (p: GridCellProps) => {
     const { columnIndex, key, style } = p;
     const { view } = this.props;
+    if (columnIndex === 0) {
+      return (
+        <div key={key} style={style} className={styles.columnHeader.cell} />
+      );
+    }
     return (
       <div key={key} style={style} className={styles.columnHeader.cell}>
         <div>{view.getColumn(columnIndex)}</div>
@@ -234,6 +256,18 @@ const styles = {
   grid: style({
     border: "1px solid #d9d9d9",
   }),
+  rowHeader: {
+    cell: style({
+      boxSizing: "border-box",
+      color: "#333",
+      padding: 5,
+      fontSize: "12px",
+      backgroundColor: "#f3f3f3",
+      borderRight: "1px solid #d9d9d9",
+      borderBottom: "1px solid #d9d9d9",
+      textAlign: "center",
+    }),
+  },
   columnHeader: {
     cell: style({
       display: "flex",
